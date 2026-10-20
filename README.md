@@ -2,7 +2,7 @@
 
 Backend for the MOBA (Unity project: `moba-test`). PostgreSQL database plus a C# API (ASP.NET Core, .NET 10), both run with Docker.
 
-**Status:** phase 1 (local setup). The database schema exists; account endpoints arrive in phase 2.
+**Status:** phase 2 (accounts). Players can register, log in and keep their settings on their account.
 
 ## Run it
 
@@ -22,6 +22,51 @@ That's all. Check it at http://localhost:8080/health, which should return `{"sta
 | `docker compose down -v` | Stop **and delete all data** |
 
 On the very first start the API log shows one `fail: ... __EFMigrationsHistory` line. That's EF Core checking for its history table before creating it, and it's harmless.
+
+## API
+
+JSON in and out. Errors always look like `{"error": "code", "message": "Text to show the player"}`.
+
+| Endpoint | Auth | Does |
+|---|---|---|
+| `POST /auth/register` | – | `{email, username, password}` → `201 {token, expiresAt, profile}` |
+| `POST /auth/login` | – | `{login, password}` (login = email **or** username) → `200 {token, expiresAt, profile}` |
+| `POST /auth/logout` | ✔ | Ends this session → `204` |
+| `GET /me` | ✔ | `{accountId, email, username, level, xp, mmr, settings}` |
+| `PUT /me/settings` | ✔ | Replaces the settings with the JSON object in the body (max 16 KB) → `204` |
+| `GET /health` | – | `{status, database}` |
+
+**Auth** means the header `Authorization: Bearer <token>`.
+
+**Rules**
+- **Passwords:** 8–128 characters. They're stored only as PBKDF2 hashes (ASP.NET Core's `PasswordHasher`).
+- **Usernames:** 3–24 letters, numbers and `_`. Usernames and emails are unique regardless of capitalisation.
+- **Sessions:** last 30 days. The client keeps the token; the database stores only its SHA-256 hash.
+- **Rate limit:** register and login allow 10 attempts per minute per IP address. After that the API answers `429`.
+- **Wrong logins:** a wrong email, username or password all get the same answer, so nobody can find out which accounts exist.
+
+Common error codes:
+- `invalid_input`
+- `email_taken`
+- `username_taken`
+- `invalid_credentials`
+- `invalid_json`
+- `too_large`
+- `rate_limited`
+
+### Try it
+
+```bash
+curl -X POST localhost:8080/auth/register -H "Content-Type: application/json" \
+  -d '{"email":"me@example.com","username":"Me","password":"something-long"}'
+curl localhost:8080/me -H "Authorization: Bearer <token from the reply>"
+```
+
+### In the game
+
+The Unity project's login screen (before the main menu) uses this API through `Scripts/Online/AccountService.cs`. While logged in, the options and keybinds are saved to the account, and logging in on another PC restores them. "Play offline" skips the login when the backend isn't running.
+
+The game connects to `http://localhost:8080` by default. To use another server, set the PlayerPrefs key `moba.backend.url`. Plain `http://` only works in the Editor and in development builds; release builds need HTTPS (phase 4).
 
 ## Database
 
@@ -61,7 +106,7 @@ Start just the database with `docker compose up -d db`, then run the API from yo
 ## Roadmap
 
 1. **Local setup** ✅
-2. Accounts: register/login, Unity login screen, profile and settings sync
+2. **Accounts** ✅ register/login, Unity login screen, profile and settings sync
 3. Game data: server-recorded match results, match history
 4. Online hosting: VPS with the same Compose setup, HTTPS, nightly backups
 5. Later: Discord login, friends, MMR and matchmaking

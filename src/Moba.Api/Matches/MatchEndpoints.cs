@@ -206,6 +206,7 @@ public static partial class MatchEndpoints
     const int MaxItems = 8;
     const int MaxSpells = 4;
     const int MaxMods = 4;
+    const int MaxRank = 10;
     static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     static readonly PlayerBuild EmptyBuild = new([], []);
 
@@ -220,13 +221,13 @@ public static partial class MatchEndpoints
         if (build.Items is { Count: > MaxItems } || build.Spells is { Count: > MaxSpells }) return false;
         if (build.Items != null && !build.Items.All(IsItemId)) return false;
         return build.Spells == null || build.Spells.All(s =>
-            s != null && IsItemId(s.Id) && (s.Mods == null || (s.Mods.Count <= MaxMods && s.Mods.All(IsItemId))));
+            s != null && s.Rank is >= 0 and <= MaxRank && IsItemId(s.Id) && (s.Mods == null || (s.Mods.Count <= MaxMods && s.Mods.All(IsItemId))));
     }
 
     // Nulls become empty, so stored builds always have the same shape.
     static PlayerBuild Normalize(PlayerBuild build) => new(
         build.Items?.Select(i => i ?? "").ToList() ?? [],
-        build.Spells?.Select(s => new SpellBuild(s.Id ?? "", s.Mods?.Select(m => m ?? "").ToList() ?? [])).ToList() ?? []);
+        build.Spells?.Select(s => new SpellBuild(s.Id ?? "", s.Mods?.Select(m => m ?? "").ToList() ?? [], s.Rank)).ToList() ?? []);
 
     static IResult Invalid(string message) => Results.BadRequest(new ApiError("invalid_input", message));
 }

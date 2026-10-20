@@ -19,8 +19,8 @@ public record PlayerResult(
 // Final build. Item ids are the game's asset names ("IronBlade", "Spell_Fireball", "Mod_Volley"); "" = empty slot.
 public record PlayerBuild(List<string>? Items, List<SpellBuild>? Spells);
 
-// One spell slot (Q, W, E, R in order): the spell ("" = empty) and its socketed mods.
-public record SpellBuild(string? Id, List<string>? Mods);
+// One spell slot (Q, W, E, R in order): the spell ("" = empty), its rank (0 = not learned) and socketed mods.
+public record SpellBuild(string? Id, List<string>? Mods, int Rank = 0);
 
 // Everything recorded about one match (GET /me/matches/{id}).
 public record MatchDetailResponse(

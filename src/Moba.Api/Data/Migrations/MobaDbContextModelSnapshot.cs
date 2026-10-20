@@ -187,13 +187,25 @@ namespace Moba.Api.Data.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("assists");
 
+                    b.Property<string>("Build")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("build");
+
                     b.Property<int>("CreepScore")
                         .HasColumnType("integer")
                         .HasColumnName("creep_score");
 
+                    b.Property<int>("DamageTaken")
+                        .HasColumnType("integer")
+                        .HasColumnName("damage_taken");
+
                     b.Property<int>("Deaths")
                         .HasColumnType("integer")
                         .HasColumnName("deaths");
+
+                    b.Property<int>("HeroDamage")
+                        .HasColumnType("integer")
+                        .HasColumnName("hero_damage");
 
                     b.Property<string>("HeroId")
                         .IsRequired()
@@ -226,6 +238,10 @@ namespace Moba.Api.Data.Migrations
                         .HasMaxLength(8)
                         .HasColumnType("character varying(8)")
                         .HasColumnName("team");
+
+                    b.Property<int>("TotalDamage")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_damage");
 
                     b.HasKey("Id")
                         .HasName("pk_match_players");

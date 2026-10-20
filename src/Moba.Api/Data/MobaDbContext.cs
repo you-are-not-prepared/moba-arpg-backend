@@ -60,6 +60,7 @@ public class MobaDbContext(DbContextOptions<MobaDbContext> options) : DbContext(
         {
             e.Property(p => p.Team).HasConversion<string>().HasMaxLength(8);
             e.Property(p => p.HeroId).HasMaxLength(32);
+            e.Property(p => p.Build).HasColumnType("jsonb");
             e.HasOne(p => p.Match).WithMany(m => m.Players).HasForeignKey(p => p.MatchId)
                 .OnDelete(DeleteBehavior.Cascade);
             // Deleting an account keeps the match on record, just without the player link.

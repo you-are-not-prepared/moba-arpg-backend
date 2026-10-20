@@ -86,6 +86,12 @@ public class MatchPlayer
     public int Deaths { get; set; }
     public int Assists { get; set; }
     public int CreepScore { get; set; }
+    // Damage actually dealt (health removed): to enemy heroes, to everything, and received.
+    public int HeroDamage { get; set; }
+    public int TotalDamage { get; set; }
+    public int DamageTaken { get; set; }
+    // Final build as JSON: {"items":[8 item ids or ""],"spells":[{"id":..,"mods":[..]} x4]}. Null for older matches.
+    public string? Build { get; set; }
 }
 
 public enum FriendshipStatus { Pending, Accepted, Blocked }

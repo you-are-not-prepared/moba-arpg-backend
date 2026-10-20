@@ -35,8 +35,9 @@ JSON in and out. Errors always look like `{"error": "code", "message": "Text to 
 | `GET /me` | ✔ | `{accountId, email, username, level, xp, mmr, settings}` |
 | `PUT /me/settings` | ✔ | Replaces the settings with the JSON object in the body (max 16 KB) → `204` |
 | `POST /matches` | ✔ | Start a match: `{mode, mapLayout, players: [{team, heroId, isBot, isLocal}]}` → `201 {matchId}` |
-| `POST /matches/{id}/result` | ✔ | Finish it, once: `{winnerTeam, cheatsUsed, players: [{slot, level, kills, deaths, assists, creepScore}]}` → `204` |
+| `POST /matches/{id}/result` | ✔ | Finish it, once: `{winnerTeam, cheatsUsed, players: [{slot, level, kills, deaths, assists, creepScore, heroDamage, totalDamage, damageTaken, build}]}` → `204` |
 | `GET /me/matches?limit=20` | ✔ | Finished matches, newest first, with every player's numbers (max 50) |
+| `GET /me/matches/{id}` | ✔ | One match in full: also each player's damage (to heroes, total, taken) and final build |
 | `GET /me/stats` | ✔ | Totals and per-hero matches/wins, without matches where cheats were used |
 | `GET /health` | – | `{status, database}` |
 

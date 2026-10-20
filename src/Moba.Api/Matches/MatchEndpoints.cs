@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Moba.Api.Auth;
@@ -6,7 +7,7 @@ using Match = Moba.Api.Data.Match;
 
 namespace Moba.Api.Matches;
 
-// POST /matches, POST /matches/{id}/result, GET /me/matches, GET /me/stats
+// POST /matches, POST /matches/{id}/result, GET /me/matches, GET /me/matches/{id}, GET /me/stats
 //
 // Matches still run inside the game client, so the client reports them. To keep that honest the server:
 // creates the match itself (id, start time), takes exactly one result per match and only from the account that
@@ -29,6 +30,7 @@ public static partial class MatchEndpoints
 
         RouteGroupBuilder me = app.MapGroup("/me").RequireAuthorization();
         me.MapGet("/matches", History);
+        me.MapGet("/matches/{id:guid}", Detail);
         me.MapGet("/stats", Stats);
     }
 
@@ -101,8 +103,11 @@ public static partial class MatchEndpoints
         foreach (PlayerResult r in results)
         {
             if (r.Level is < 1 or > 30 || r.Kills is < 0 or > 500 || r.Deaths is < 0 or > 500
-                || r.Assists is < 0 or > 500 || r.CreepScore is < 0 or > 5000)
+                || r.Assists is < 0 or > 500 || r.CreepScore is < 0 or > 5000
+                || r.HeroDamage is < 0 or > MaxDamage || r.TotalDamage is < 0 or > MaxDamage
+                || r.DamageTaken is < 0 or > MaxDamage || r.HeroDamage > r.TotalDamage)
                 return Invalid("Some of the numbers are impossible.");
+            if (!IsValidBuild(r.Build)) return Invalid("A player's build isn't valid.");
         }
 
         foreach (PlayerResult r in results)
@@ -113,6 +118,10 @@ public static partial class MatchEndpoints
             player.Deaths = r.Deaths;
             player.Assists = r.Assists;
             player.CreepScore = r.CreepScore;
+            player.HeroDamage = r.HeroDamage;
+            player.TotalDamage = r.TotalDamage;
+            player.DamageTaken = r.DamageTaken;
+            player.Build = r.Build != null ? JsonSerializer.Serialize(Normalize(r.Build), JsonOptions) : null;
         }
         match.WinnerTeam = winner;
         match.EndedAt = now;
@@ -166,6 +175,59 @@ public static partial class MatchEndpoints
         return Results.Ok(new PlayerStatsResponse(rows.Count, wins, rows.Count - wins,
             rows.Sum(r => r.Kills), rows.Sum(r => r.Deaths), rows.Sum(r => r.Assists), rows.Sum(r => r.CreepScore), heroes));
     }
+
+    // Everything about one of the caller's finished matches, including damage and builds.
+    static async Task<IResult> Detail(Guid id, HttpContext http, MobaDbContext db)
+    {
+        Guid accountId = http.User.AccountId();
+        Match? match = await db.Matches.AsNoTracking()
+            .Where(m => m.Id == id && m.EndedAt != null && m.Players.Any(p => p.AccountId == accountId))
+            .Include(m => m.Players).ThenInclude(p => p.Account)
+            .AsSplitQuery()
+            .FirstOrDefaultAsync();
+        if (match == null) return Results.NotFound(new ApiError("not_found", "Match not found."));
+
+        MatchPlayer mine = match.Players.First(p => p.AccountId == accountId);
+        List<MatchDetailPlayer> players = match.Players.OrderBy(p => p.Slot).Select(p => new MatchDetailPlayer(
+            p.Slot, p.Team.ToString(), p.HeroId, p.IsBot, p.Account?.Username,
+            p.Level, p.Kills, p.Deaths, p.Assists, p.CreepScore,
+            p.Build != null, p.HeroDamage, p.TotalDamage, p.DamageTaken,
+            p.Build != null ? JsonSerializer.Deserialize<PlayerBuild>(p.Build, JsonOptions)! : EmptyBuild)).ToList();
+
+        return Results.Ok(new MatchDetailResponse(
+            match.Id, match.Mode.ToString(), match.MapLayout, match.StartedAt,
+            (int)(match.EndedAt!.Value - match.StartedAt).TotalSeconds,
+            match.WinnerTeam?.ToString() ?? "", mine.Team == match.WinnerTeam, match.CheatsUsed, mine.Slot, players));
+    }
+
+    // ---------- Builds ----------
+
+    const int MaxDamage = 10_000_000;
+    const int MaxItems = 8;
+    const int MaxSpells = 4;
+    const int MaxMods = 4;
+    const int MaxRank = 10;
+    static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    static readonly PlayerBuild EmptyBuild = new([], []);
+
+    [GeneratedRegex("^[A-Za-z0-9_]{1,64}$")]
+    private static partial Regex ItemIdPattern();
+
+    static bool IsItemId(string? id) => string.IsNullOrEmpty(id) || ItemIdPattern().IsMatch(id);
+
+    static bool IsValidBuild(PlayerBuild? build)
+    {
+        if (build == null) return true;
+        if (build.Items is { Count: > MaxItems } || build.Spells is { Count: > MaxSpells }) return false;
+        if (build.Items != null && !build.Items.All(IsItemId)) return false;
+        return build.Spells == null || build.Spells.All(s =>
+            s != null && s.Rank is >= 0 and <= MaxRank && IsItemId(s.Id) && (s.Mods == null || (s.Mods.Count <= MaxMods && s.Mods.All(IsItemId))));
+    }
+
+    // Nulls become empty, so stored builds always have the same shape.
+    static PlayerBuild Normalize(PlayerBuild build) => new(
+        build.Items?.Select(i => i ?? "").ToList() ?? [],
+        build.Spells?.Select(s => new SpellBuild(s.Id ?? "", s.Mods?.Select(m => m ?? "").ToList() ?? [], s.Rank)).ToList() ?? []);
 
     static IResult Invalid(string message) => Results.BadRequest(new ApiError("invalid_input", message));
 }

@@ -12,7 +12,26 @@ public record StartMatchResponse(Guid MatchId);
 // Sent once when the match ends: every slot's final numbers.
 public record MatchResultRequest(string? WinnerTeam, bool CheatsUsed, List<PlayerResult>? Players);
 
-public record PlayerResult(int Slot, int Level, int Kills, int Deaths, int Assists, int CreepScore);
+public record PlayerResult(
+    int Slot, int Level, int Kills, int Deaths, int Assists, int CreepScore,
+    int HeroDamage, int TotalDamage, int DamageTaken, PlayerBuild? Build);
+
+// Final build. Item ids are the game's asset names ("IronBlade", "Spell_Fireball", "Mod_Volley"); "" = empty slot.
+public record PlayerBuild(List<string>? Items, List<SpellBuild>? Spells);
+
+// One spell slot (Q, W, E, R in order): the spell ("" = empty) and its socketed mods.
+public record SpellBuild(string? Id, List<string>? Mods);
+
+// Everything recorded about one match (GET /me/matches/{id}).
+public record MatchDetailResponse(
+    Guid MatchId, string Mode, string MapLayout, DateTime StartedAt, int DurationSeconds,
+    string WinnerTeam, bool Won, bool CheatsUsed, int Slot, List<MatchDetailPlayer> Players);
+
+// `HasDetails` is false for matches recorded before damage and builds were tracked.
+public record MatchDetailPlayer(
+    int Slot, string Team, string HeroId, bool IsBot, string? Username,
+    int Level, int Kills, int Deaths, int Assists, int CreepScore,
+    bool HasDetails, int HeroDamage, int TotalDamage, int DamageTaken, PlayerBuild Build);
 
 public record MatchHistoryResponse(List<MatchSummary> Matches);
 

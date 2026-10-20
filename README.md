@@ -2,7 +2,7 @@
 
 Backend for the MOBA (Unity project: `moba-test`). PostgreSQL database plus a C# API (ASP.NET Core, .NET 10), both run with Docker.
 
-**Status:** phase 2 (accounts). Players can register, log in and keep their settings on their account.
+**Status:** phase 3 (game data). Accounts, settings sync, recorded matches, match history and stats.
 
 ## Run it
 
@@ -34,6 +34,10 @@ JSON in and out. Errors always look like `{"error": "code", "message": "Text to 
 | `POST /auth/logout` | ✔ | Ends this session → `204` |
 | `GET /me` | ✔ | `{accountId, email, username, level, xp, mmr, settings}` |
 | `PUT /me/settings` | ✔ | Replaces the settings with the JSON object in the body (max 16 KB) → `204` |
+| `POST /matches` | ✔ | Start a match: `{mode, mapLayout, players: [{team, heroId, isBot, isLocal}]}` → `201 {matchId}` |
+| `POST /matches/{id}/result` | ✔ | Finish it, once: `{winnerTeam, cheatsUsed, players: [{slot, level, kills, deaths, assists, creepScore}]}` → `204` |
+| `GET /me/matches?limit=20` | ✔ | Finished matches, newest first, with every player's numbers (max 50) |
+| `GET /me/stats` | ✔ | Totals and per-hero matches/wins, without matches where cheats were used |
 | `GET /health` | – | `{status, database}` |
 
 **Auth** means the header `Authorization: Bearer <token>`.
@@ -53,6 +57,16 @@ Common error codes:
 - `invalid_json`
 - `too_large`
 - `rate_limited`
+
+### How matches are recorded
+
+Matches still run inside the game client, so the client reports them. When it does, the server:
+- creates the match itself, assigning its ID and start time;
+- accepts exactly **one** result per match, and only from the account that started it;
+- refuses results less than 15 seconds after the start, results that don't list every player, and impossible numbers;
+- marks matches where the in-game cheat menu was used, which stay in the history but out of the stats.
+
+A match that's left early never gets a result, so it never counts. This makes casual cheating hard, but a modified client could still lie. Results that can't be faked need the server to run the match itself, which comes with online PvP.
 
 ### Try it
 
@@ -107,6 +121,6 @@ Start just the database with `docker compose up -d db`, then run the API from yo
 
 1. **Local setup** ✅
 2. **Accounts** ✅ register/login, Unity login screen, profile and settings sync
-3. Game data: server-recorded match results, match history
+3. **Game data** ✅ recorded match results, match history and stats
 4. Online hosting: VPS with the same Compose setup, HTTPS, nightly backups
 5. Later: Discord login, friends, MMR and matchmaking

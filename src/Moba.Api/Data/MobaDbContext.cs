@@ -53,6 +53,7 @@ public class MobaDbContext(DbContextOptions<MobaDbContext> options) : DbContext(
             e.Property(m => m.MapLayout).HasMaxLength(32);
             e.Property(m => m.StartedAt).HasDefaultValueSql("now()");
             e.HasIndex(m => m.StartedAt);
+            e.HasOne(m => m.CreatedBy).WithMany().HasForeignKey(m => m.CreatedById).OnDelete(DeleteBehavior.SetNull);
         });
 
         b.Entity<MatchPlayer>(e =>
@@ -65,6 +66,7 @@ public class MobaDbContext(DbContextOptions<MobaDbContext> options) : DbContext(
             e.HasOne(p => p.Account).WithMany().HasForeignKey(p => p.AccountId)
                 .OnDelete(DeleteBehavior.SetNull);
             e.HasIndex(p => new { p.AccountId, p.MatchId }); // a player's match history
+            e.HasIndex(p => new { p.MatchId, p.Slot }).IsUnique();
             e.ToTable(t => t.HasCheckConstraint("ck_match_players_bot_has_no_account",
                 "NOT is_bot OR account_id IS NULL"));
         });

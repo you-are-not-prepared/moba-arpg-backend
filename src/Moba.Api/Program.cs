@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Moba.Api.Auth;
 using Moba.Api.Data;
+using Moba.Api.Matches;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -57,5 +58,6 @@ app.MapGet("/health", async (MobaDbContext db) =>
 });
 
 app.MapAccountEndpoints();
+app.MapMatchEndpoints();
 
 app.Run();

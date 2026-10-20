@@ -123,6 +123,14 @@ namespace Moba.Api.Data.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<bool>("CheatsUsed")
+                        .HasColumnType("boolean")
+                        .HasColumnName("cheats_used");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_id");
+
                     b.Property<DateTime?>("EndedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("ended_at");
@@ -153,6 +161,9 @@ namespace Moba.Api.Data.Migrations
                     b.HasKey("Id")
                         .HasName("pk_matches");
 
+                    b.HasIndex("CreatedById")
+                        .HasDatabaseName("ix_matches_created_by_id");
+
                     b.HasIndex("StartedAt")
                         .HasDatabaseName("ix_matches_started_at");
 
@@ -171,6 +182,10 @@ namespace Moba.Api.Data.Migrations
                     b.Property<Guid?>("AccountId")
                         .HasColumnType("uuid")
                         .HasColumnName("account_id");
+
+                    b.Property<int>("Assists")
+                        .HasColumnType("integer")
+                        .HasColumnName("assists");
 
                     b.Property<int>("CreepScore")
                         .HasColumnType("integer")
@@ -202,6 +217,10 @@ namespace Moba.Api.Data.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("match_id");
 
+                    b.Property<int>("Slot")
+                        .HasColumnType("integer")
+                        .HasColumnName("slot");
+
                     b.Property<string>("Team")
                         .IsRequired()
                         .HasMaxLength(8)
@@ -211,11 +230,12 @@ namespace Moba.Api.Data.Migrations
                     b.HasKey("Id")
                         .HasName("pk_match_players");
 
-                    b.HasIndex("MatchId")
-                        .HasDatabaseName("ix_match_players_match_id");
-
                     b.HasIndex("AccountId", "MatchId")
                         .HasDatabaseName("ix_match_players_account_id_match_id");
+
+                    b.HasIndex("MatchId", "Slot")
+                        .IsUnique()
+                        .HasDatabaseName("ix_match_players_match_id_slot");
 
                     b.ToTable("match_players", null, t =>
                         {
@@ -327,6 +347,17 @@ namespace Moba.Api.Data.Migrations
                     b.Navigation("Account");
 
                     b.Navigation("Friend");
+                });
+
+            modelBuilder.Entity("Moba.Api.Data.Match", b =>
+                {
+                    b.HasOne("Moba.Api.Data.Account", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_matches_accounts_created_by_id");
+
+                    b.Navigation("CreatedBy");
                 });
 
             modelBuilder.Entity("Moba.Api.Data.MatchPlayer", b =>

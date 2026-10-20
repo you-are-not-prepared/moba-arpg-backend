@@ -58,6 +58,11 @@ public class Match
     public DateTime? EndedAt { get; set; }
     // Null while the match is running (or if it was abandoned).
     public TeamSide? WinnerTeam { get; set; }
+    // The account whose game client started the match and is the only one allowed to report its result.
+    public Guid? CreatedById { get; set; }
+    public Account? CreatedBy { get; set; }
+    // The in-game cheat menu was used: kept in history, left out of stats.
+    public bool CheatsUsed { get; set; }
 
     public List<MatchPlayer> Players { get; set; } = [];
 }
@@ -68,6 +73,8 @@ public class MatchPlayer
     public long Id { get; set; }
     public Guid MatchId { get; set; }
     public Match Match { get; set; } = null!;
+    // Position in the lineup the match was started with (0..); results refer to players by slot.
+    public int Slot { get; set; }
     public Guid? AccountId { get; set; }
     public Account? Account { get; set; }
     public bool IsBot { get; set; }
@@ -77,6 +84,7 @@ public class MatchPlayer
     public int Level { get; set; }
     public int Kills { get; set; }
     public int Deaths { get; set; }
+    public int Assists { get; set; }
     public int CreepScore { get; set; }
 }
 

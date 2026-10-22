@@ -9,9 +9,10 @@ namespace Moba.Api.Matches;
 
 // POST /matches, POST /matches/{id}/result, GET /me/matches, GET /me/matches/{id}, GET /me/stats
 //
-// Matches still run inside the game client, so the client reports them. To keep that honest the server:
+// Offline matches run inside the game client, so the client reports them. To keep that honest the server:
 // creates the match itself (id, start time), takes exactly one result per match and only from the account that
-// started it, and rejects impossible numbers. Results that can't be faked at all need a game server (online PvP).
+// started it, and rejects impossible numbers. Matches played on a game server are recorded by the game server
+// instead (see MatchEndpoints.GameServer.cs), so they can't be faked by a client.
 public static partial class MatchEndpoints
 {
     public const int MaxPlayers = 10;
@@ -102,27 +103,11 @@ public static partial class MatchEndpoints
             return Invalid("The result must list every player of the match once.");
         foreach (PlayerResult r in results)
         {
-            if (r.Level is < 1 or > 30 || r.Kills is < 0 or > 500 || r.Deaths is < 0 or > 500
-                || r.Assists is < 0 or > 500 || r.CreepScore is < 0 or > 5000
-                || r.HeroDamage is < 0 or > MaxDamage || r.TotalDamage is < 0 or > MaxDamage
-                || r.DamageTaken is < 0 or > MaxDamage || r.HeroDamage > r.TotalDamage)
-                return Invalid("Some of the numbers are impossible.");
+            if (!IsPossible(r)) return Invalid("Some of the numbers are impossible.");
             if (!IsValidBuild(r.Build)) return Invalid("A player's build isn't valid.");
         }
 
-        foreach (PlayerResult r in results)
-        {
-            MatchPlayer player = match.Players.First(p => p.Slot == r.Slot);
-            player.Level = r.Level;
-            player.Kills = r.Kills;
-            player.Deaths = r.Deaths;
-            player.Assists = r.Assists;
-            player.CreepScore = r.CreepScore;
-            player.HeroDamage = r.HeroDamage;
-            player.TotalDamage = r.TotalDamage;
-            player.DamageTaken = r.DamageTaken;
-            player.Build = r.Build != null ? JsonSerializer.Serialize(Normalize(r.Build), JsonOptions) : null;
-        }
+        foreach (PlayerResult r in results) ApplyResult(match.Players.First(p => p.Slot == r.Slot), r);
         match.WinnerTeam = winner;
         match.EndedAt = now;
         match.CheatsUsed = request.CheatsUsed;
@@ -198,6 +183,25 @@ public static partial class MatchEndpoints
             match.Id, match.Mode.ToString(), match.MapLayout, match.StartedAt,
             (int)(match.EndedAt!.Value - match.StartedAt).TotalSeconds,
             match.WinnerTeam?.ToString() ?? "", mine.Team == match.WinnerTeam, match.CheatsUsed, mine.Slot, players));
+    }
+
+    static bool IsPossible(PlayerResult r) =>
+        r.Level is >= 1 and <= 30 && r.Kills is >= 0 and <= 500 && r.Deaths is >= 0 and <= 500
+        && r.Assists is >= 0 and <= 500 && r.CreepScore is >= 0 and <= 5000
+        && r.HeroDamage is >= 0 and <= MaxDamage && r.TotalDamage is >= 0 and <= MaxDamage
+        && r.DamageTaken is >= 0 and <= MaxDamage && r.HeroDamage <= r.TotalDamage;
+
+    static void ApplyResult(MatchPlayer player, PlayerResult r)
+    {
+        player.Level = r.Level;
+        player.Kills = r.Kills;
+        player.Deaths = r.Deaths;
+        player.Assists = r.Assists;
+        player.CreepScore = r.CreepScore;
+        player.HeroDamage = r.HeroDamage;
+        player.TotalDamage = r.TotalDamage;
+        player.DamageTaken = r.DamageTaken;
+        player.Build = r.Build != null ? JsonSerializer.Serialize(Normalize(r.Build), JsonOptions) : null;
     }
 
     // ---------- Builds ----------

@@ -59,5 +59,6 @@ app.MapGet("/health", async (MobaDbContext db) =>
 
 app.MapAccountEndpoints();
 app.MapMatchEndpoints();
+app.MapGameServerEndpoints();
 
 app.Run();

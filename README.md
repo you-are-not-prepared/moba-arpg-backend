@@ -2,7 +2,7 @@
 
 Backend for the MOBA (Unity project: `moba-test`). PostgreSQL database plus a C# API (ASP.NET Core, .NET 10), both run with Docker.
 
-**Status:** phase 3 (game data). Accounts, settings sync, recorded matches, match history and stats.
+**Status:** phase 3 (game data). Accounts, settings sync, recorded matches (from the game client offline, from the game server online), match history and stats.
 
 ## Run it
 
@@ -39,9 +39,12 @@ JSON in and out. Errors always look like `{"error": "code", "message": "Text to 
 | `GET /me/matches?limit=20` | ✔ | Finished matches, newest first, with every player's numbers (max 50) |
 | `GET /me/matches/{id}` | ✔ | One match in full: also each player's damage (to heroes, total, taken) and final build |
 | `GET /me/stats` | ✔ | Totals and per-hero matches/wins, without matches where cheats were used |
+| `POST /me/join-ticket` | ✔ | `{ticket, expiresAt}`: proof of who you are, for joining a game server (valid 2 minutes) |
+| `POST /server/join-tickets/redeem` | Server key | `{ticket}` → `{accountId, username}` |
+| `POST /server/matches` | Server key | A finished game-server match: `{mode, mapLayout, durationSeconds, winnerTeam, cheatsUsed, players: [{team, heroId, isBot, accountId, level, kills, deaths, assists, creepScore, heroDamage, totalDamage, damageTaken, build}]}` → `201 {matchId}` |
 | `GET /health` | – | `{status, database}` |
 
-**Auth** means the header `Authorization: Bearer <token>`.
+**Auth** means the header `Authorization: Bearer <token>`. **Server key** means the header `X-Game-Server-Key: <GAME_SERVER_KEY>`; only the game server has it.
 
 **Rules**
 - **Passwords:** 8–128 characters. They're stored only as PBKDF2 hashes (ASP.NET Core's `PasswordHasher`).
@@ -61,13 +64,20 @@ Common error codes:
 
 ### How matches are recorded
 
-Matches still run inside the game client, so the client reports them. When it does, the server:
+**Online (game server).** The game server runs the match, so it records it, and clients can't change the result:
+1. A logged-in player gets a join ticket (`POST /me/join-ticket`) and hands it to the game server when joining. Their session token never leaves the game.
+2. The game server redeems it (`/server/join-tickets/redeem`) to learn the account. Tickets are signed with a key that exists only in the running API, and they expire after 2 minutes.
+3. When the match ends, the game server sends everything at once (`/server/matches`). Each account can play only one hero per match, and the same number checks apply.
+
+Matches with no logged-in players aren't sent. Game-server matches have no `created_by`.
+
+**Offline (PvE in the game client).** The client reports these matches itself. When it does, the server:
 - creates the match itself, assigning its ID and start time;
 - accepts exactly **one** result per match, and only from the account that started it;
 - refuses results less than 15 seconds after the start, results that don't list every player, and impossible numbers;
 - marks matches where the in-game cheat menu was used, which stay in the history but out of the stats.
 
-A match that's left early never gets a result, so it never counts. This makes casual cheating hard, but a modified client could still lie. Results that can't be faked need the server to run the match itself, which comes with online PvP.
+A match that's left early never gets a result, so it never counts. This makes casual cheating hard, but a modified client could still lie about offline matches.
 
 ### Try it
 
@@ -111,7 +121,8 @@ The schema is defined in code (`src/Moba.Api/Data`) and applied automatically wh
 ## Passwords and secrets
 
 - Locally, the database uses the password `local-dev-only`. That's fine because both ports only listen on `127.0.0.1`, so other machines can't reach them.
-- **On any real server:** copy `.env.example` to `.env`, set a strong `DB_PASSWORD`, and never commit `.env` (git ignores it).
+- The game-server key defaults to `local-dev-only-server-key` on both sides (this compose file and moba-test's), so recording works locally out of the box.
+- **On any real server:** copy `.env.example` to `.env`, set a strong `DB_PASSWORD` and `GAME_SERVER_KEY` (the game server needs the same key), and never commit `.env` (git ignores it).
 - The game client never connects to the database. It only talks to the API.
 
 ## Running the API without Docker (optional)

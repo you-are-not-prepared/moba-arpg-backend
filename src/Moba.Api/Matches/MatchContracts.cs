@@ -49,3 +49,25 @@ public record PlayerStatsResponse(
     int Matches, int Wins, int Losses, int Kills, int Deaths, int Assists, int CreepScore, List<HeroStats> Heroes);
 
 public record HeroStats(string HeroId, int Matches, int Wins);
+
+// ---------- Game server (see MatchEndpoints.GameServer.cs) ----------
+
+public record JoinTicketResponse(string Ticket, DateTime ExpiresAt);
+
+public record RedeemTicketRequest(string? Ticket);
+
+public record RedeemTicketResponse(Guid AccountId, string Username);
+
+// Sent by a game server when its match ends: the lineup in slot order (slot = index) with everyone's numbers.
+public record ServerMatchRequest(
+    string? Mode, string? MapLayout, int DurationSeconds, string? WinnerTeam, bool CheatsUsed, List<ServerMatchPlayer>? Players);
+
+// `AccountId` is empty for bots and for players who weren't logged in.
+public record ServerMatchPlayer(
+    string? Team, string? HeroId, bool IsBot, string? AccountId,
+    int Level, int Kills, int Deaths, int Assists, int CreepScore,
+    int HeroDamage, int TotalDamage, int DamageTaken, PlayerBuild? Build)
+{
+    [System.Text.Json.Serialization.JsonIgnore]
+    public PlayerResult Result => new(0, Level, Kills, Deaths, Assists, CreepScore, HeroDamage, TotalDamage, DamageTaken, Build);
+}

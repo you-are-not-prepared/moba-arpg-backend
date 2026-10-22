@@ -1,6 +1,7 @@
 # Local backend: PostgreSQL + the API.  Start: docker compose up -d --build
 # Both ports are bound to 127.0.0.1, so nothing is reachable from other machines.
-# DB_PASSWORD comes from .env; without one, a local-only default is used (never use it on a real server).
+# DB_PASSWORD and GAME_SERVER_KEY come from .env; without them, local-only defaults are used (never use those
+# on a real server). The game server (moba-test's docker-compose) must use the same GAME_SERVER_KEY.
 name: moba
 
 services:
@@ -26,6 +27,7 @@ services:
     restart: unless-stopped
     environment:
       ConnectionStrings__Default: "Host=db;Port=5432;Database=moba;Username=moba;Password=${DB_PASSWORD:-local-dev-only};Gss Encryption Mode=Disable"
+      GameServer__Key: ${GAME_SERVER_KEY:-local-dev-only-server-key}
     depends_on:
       db:
         condition: service_healthy

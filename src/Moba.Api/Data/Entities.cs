@@ -59,6 +59,7 @@ public class Match
     // Null while the match is running (or if it was abandoned).
     public TeamSide? WinnerTeam { get; set; }
     // The account whose game client started the match and is the only one allowed to report its result.
+    // Null for matches a game server recorded.
     public Guid? CreatedById { get; set; }
     public Account? CreatedBy { get; set; }
     // The in-game cheat menu was used: kept in history, left out of stats.

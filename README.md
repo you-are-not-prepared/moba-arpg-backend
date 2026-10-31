@@ -1,6 +1,6 @@
-# moba-backend
+# moba-arpg-backend
 
-Backend for the MOBA (Unity project: `moba-test`). PostgreSQL database plus a C# API (ASP.NET Core, .NET 10), both run with Docker.
+Backend for the MOBA (Unity project: `moba-arpg-game`). PostgreSQL database plus a C# API (ASP.NET Core, .NET 10), both run with Docker.
 
 **Status:** phase 3 (game data). Accounts, settings sync, recorded matches (from the game client offline, from the game server online), match history and stats.
 
@@ -121,7 +121,7 @@ The schema is defined in code (`src/Moba.Api/Data`) and applied automatically wh
 ## Passwords and secrets
 
 - Locally, the database uses the password `local-dev-only`. That's fine because both ports only listen on `127.0.0.1`, so other machines can't reach them.
-- The game-server key defaults to `local-dev-only-server-key` on both sides (this compose file and moba-test's), so recording works locally out of the box.
+- The game-server key defaults to `local-dev-only-server-key` on both sides (this compose file and moba-arpg-game's), so recording works locally out of the box.
 - **On any real server:** copy `.env.example` to `.env`, set a strong `DB_PASSWORD` and `GAME_SERVER_KEY` (the game server needs the same key), and never commit `.env` (git ignores it).
 - The game client never connects to the database. It only talks to the API.
 

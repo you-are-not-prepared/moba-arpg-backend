@@ -14,6 +14,18 @@ docker compose up -d --build
 
 That's all. Check it at http://localhost:8080/health, which should return `{"status":"ok","database":"ok"}`.
 
+Or use the `moba` script, which first checks that Docker is running. In a terminal in this folder (Visual Studio: View → Terminal):
+
+| Command | Does |
+|---|---|
+| `.\moba start` | Database + API (rebuilds after code changes) |
+| `.\moba db` | Only the database, for running the API from your IDE |
+| `.\moba stop` / `.\moba logs` / `.\moba status` | Stop (data is kept) / follow the API log / show what's running |
+
+In `cmd` it's `moba start`, without `.\`. On Mac/Linux, install PowerShell 7 and run `pwsh scripts/moba.ps1 start`. In VS Code, the same commands are tasks (Terminal → Run Task… → *Backend: start*, …).
+
+To run the game server too, clone this repo next to moba-arpg-game and run `.\moba start` there: it starts this backend first (see its README).
+
 | Command | What it does |
 |---|---|
 | `docker compose up -d --build` | Start (or rebuild after code changes) |

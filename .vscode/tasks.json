@@ -1,0 +1,55 @@
+{
+  // Docker tasks for the backend. Terminal > Run Task... (or Ctrl+Shift+P > "Tasks: Run Task").
+  // They run scripts/moba.ps1, which also works from any terminal: .\moba start (see the README).
+  // Mac/Linux need PowerShell 7 (pwsh). moba-arpg-game has the same tasks plus the game server.
+  "version": "2.0.0",
+  "options": {
+    "shell": { "executable": "pwsh", "args": ["-NoProfile", "-Command"] }
+  },
+  "windows": {
+    "options": {
+      "shell": { "executable": "powershell.exe", "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command"] }
+    }
+  },
+  "tasks": [
+    {
+      "label": "Backend: start",
+      "detail": "Database + API on localhost:8080 (rebuilds after code changes)",
+      "type": "shell",
+      "command": "./scripts/moba.ps1",
+      "args": ["start"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Backend: start database only",
+      "detail": "For running the API from your IDE or with dotnet run",
+      "type": "shell",
+      "command": "./scripts/moba.ps1",
+      "args": ["db"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Backend: stop",
+      "detail": "Data is kept",
+      "type": "shell",
+      "command": "./scripts/moba.ps1",
+      "args": ["stop"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Backend: logs",
+      "type": "shell",
+      "command": "./scripts/moba.ps1",
+      "args": ["logs"],
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Backend: status",
+      "type": "shell",
+      "command": "./scripts/moba.ps1",
+      "args": ["status"],
+      "problemMatcher": []
+    }
+  ]
+}
